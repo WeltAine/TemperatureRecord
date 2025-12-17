@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <!-- 项目基本信息 -->
+    <groupId>com.temp</groupId>
+    <artifactId>TemperatureRecord</artifactId>
+    <version>1.0.0</version>
+    <packaging>war</packaging>
+
+    <!-- 基础配置 -->
+    <properties>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <jackson.version>2.16.1</jackson.version>
+    </properties>
+
+    <!-- 仅保留核心依赖 -->
+    <dependencies>
+        <!-- Servlet API（Tomcat 10+兼容，稳定版） -->
+        <dependency>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+            <version>5.0.0</version> <!-- 稳定版，中央仓库可下载 -->
+            <scope>provided</scope> <!-- Tomcat内置，仅编译用 -->
+        </dependency>
+
+
+        <!-- JSTL（仅这一个即可，包含API+实现） -->
+        <!-- <dependency> -->
+            <!-- <groupId>org.glassfish.web</groupId> -->
+            <!-- <artifactId>jakarta.servlet.jsp.jstl</artifactId> -->
+            <!-- <version>2.0.0</version>  -->
+        <!-- </dependency> -->
+
+
+        <!-- 修正JSTL依赖：用3.0.1版本，适配Tomcat 10+ -->
+        <!-- <dependency> -->
+            <!-- <groupId>org.glassfish.web</groupId> -->
+            <!-- <artifactId>jakarta.servlet.jsp.jstl</artifactId> -->
+            <!-- <version>3.0.1</version> -->
+            <!-- 去掉scope，默认compile，会打包到WAR -->
+        <!-- </dependency> -->
+
+        <!-- Jackson（JSON解析核心） -->
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
+            <version>${jackson.version}</version>
+        </dependency>
+    </dependencies>
+
+    <!-- 构建配置（仅保留编译+WAR打包核心） -->
+    <build>
+        <finalName>TemperatureRecord</finalName>
+        <plugins>
+            <!-- JDK21编译插件 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
+                <configuration>
+                    <source>21</source>
+                    <target>21</target>
+                    <encoding>UTF-8</encoding>
+                </configuration>
+            </plugin>
+            <!-- WAR打包插件 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-war-plugin</artifactId>
+                <version>3.3.2</version>
+            </plugin>
+        </plugins>
+    </build>
+</project>
