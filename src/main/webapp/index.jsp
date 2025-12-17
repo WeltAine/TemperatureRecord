@@ -101,8 +101,9 @@
                         String name = user.getName() == null ? "" : user.getName().replace("'", "\\'");
                         String gender = user.getGender() == null ? "" : user.getGender().replace("'", "\\'");
                         String address = user.getAddress() == null ? "" : user.getAddress().replace("'", "\\'");
+                        int age = user.getAge();
                         // 拼接弹窗内容，\\n在JS中解析为\n（换行）
-                        String detailInfo = "姓名：" + name + "\\n性别：" + gender + "\\n住址：" + address;
+                        String detailInfo = "姓名：" + name + "\\n性别：" + gender + "\\n年龄：" + age + "\\n住址：" + address;
             %>
                 <tr>
                     <!-- 点击姓名弹出弹窗，无语法错误 -->
