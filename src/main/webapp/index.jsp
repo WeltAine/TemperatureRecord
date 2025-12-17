@@ -12,7 +12,7 @@
             align-items: center; /* 垂直居中 */
             justify-content: center; /* 整体水平居中 */
             margin: 20px 0;
-            gap: 20px; /* 元素之间的间距（替代margin，更优雅） */
+            gap: 20px; /* 元素之间的间距 */
         }
         /* 按钮样式优化 */
         .month-btn {
@@ -30,7 +30,7 @@
         }
         /* 标题样式微调 */
         .title-container h1 {
-            margin: 0; /* 去掉默认margin，避免垂直间距过大 */
+            margin: 0; /* 去掉默认margin */
             font-size: 24px;
             color: #333;
         }
@@ -40,13 +40,33 @@
             font-size: 16px;
             margin: 10px 0;
         }
+        /* 关键：调整姓名列样式 */
+        .name-cell {
+            width: 120px; /* 加宽到120px，确保4-5字姓名一行显示 */
+            text-align: center; /* 姓名居中显示 */
+            font-weight: 500; /* 加粗突出姓名 */
+            white-space: nowrap; /* 核心：禁止文字自动换行 */
+            overflow: hidden; /* 可选：超长姓名隐藏溢出部分 */
+            text-overflow: ellipsis; /* 可选：超长姓名显示省略号（如“欧阳娜娜...”） */        
+        }
+        /* 点击样式：手型+蓝色+下划线，提示可点击 */
+        .user-name {
+            cursor: pointer;
+            color: #0066cc; 
+            text-decoration: underline;
+            /* 点击时轻微变色，提升交互感 */
+            transition: color 0.2s;
+        }
+        .user-name:hover {
+            color: #004999;
+        }
     </style>
 </head>
 <body>
     <!-- 动态标题 + 上下月按钮（水平布局） -->
     <div class="title-container">
         <button class="month-btn" onclick="location.href='temperature?year=${prevYear}&month=${prevMonth}'">上一月</button>
-        <h1>${currentYear}年${currentMonth}月体温记录表</h1>
+        <h1>${currentYear}年${currentMonth}月体温记录表（仅展示当月测过的用户）</h1>
         <button class="month-btn" onclick="location.href='temperature?year=${nextYear}&month=${nextMonth}'">下一月</button>
     </div>
 
@@ -58,7 +78,8 @@
     <table>
         <thead>
             <tr>
-                <th rowspan="2" style="width: 20%;">用户信息</th>
+                <!-- 调整表头：仅显示“姓名”，宽度100px -->
+                <th rowspan="2" class="name-cell">姓名</th>
                 <th colspan="31">日期</th>
             </tr>
             <tr>
@@ -75,12 +96,20 @@
                 if (userList != null && !userList.isEmpty()) {
                     for (User user : userList) {
                         double[] tempArr = user.getTemperature();
+                        
+                        // 核心：手动转义单引号，无需调用方法（彻底解决方法未定义问题）
+                        String name = user.getName() == null ? "" : user.getName().replace("'", "\\'");
+                        String gender = user.getGender() == null ? "" : user.getGender().replace("'", "\\'");
+                        String address = user.getAddress() == null ? "" : user.getAddress().replace("'", "\\'");
+                        // 拼接弹窗内容，\\n在JS中解析为\n（换行）
+                        String detailInfo = "姓名：" + name + "\\n性别：" + gender + "\\n住址：" + address;
             %>
                 <tr>
-                    <td class="user-info">
-                        姓名：<%= user.getName() %><br>
-                        性别：<%= user.getGender() %><br>
-                        住址：<%= user.getAddress() %>
+                    <!-- 点击姓名弹出弹窗，无语法错误 -->
+                    <td class="name-cell">
+                        <span class="user-name" onclick="alert('<%= detailInfo %>')">
+                            <%= user.getName() %>
+                        </span>
                     </td>
                     <%
                         for (int i = 0; i < 31; i++) {
