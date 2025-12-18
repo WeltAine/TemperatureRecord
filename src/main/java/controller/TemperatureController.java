@@ -1,7 +1,10 @@
 package controller;
 
 import service.TemperatureService;
+import service.query.QueryChainBuilder;
 import service.TemperatureDBService;
+import model.QueryContext;
+import model.QueryResult;
 import model.User;
 
 import jakarta.servlet.ServletException;
@@ -53,36 +56,65 @@ public class TemperatureController extends HttpServlet {
         writeLog("前端传递的年参数：" + currentYearStr + "，月参数：" + currentMonthStr);
 
 
-
         // 2. 解析前端传递的年月参数
         if (currentYearStr != null && !currentYearStr.isEmpty()) {
-            try {
-                currentYear = Integer.parseInt(currentYearStr);
-            } catch (NumberFormatException e) {
-                currentYear = 2025; // 解析失败用默认
-            }
+            currentYear = Integer.parseInt(currentYearStr);
         }
         if (currentMonthStr != null && !currentMonthStr.isEmpty()) {
-            try {
-                currentMonth = Integer.parseInt(currentMonthStr);
-            } catch (NumberFormatException e) {
-                currentMonth = 12; // 解析失败用默认
-            }
+            currentMonth = Integer.parseInt(currentMonthStr);
         }
-
 
         // 写入解析后的参数
         writeLog("解析后的年：" + currentYear + "，月：" + currentMonth);
 
-        // 3.获取2025年12月的用户列表
-        // List<User> userList = tempService.getMonthlyTemperature(
-        //     String.valueOf(currentYear),
-        //     String.format("%02d", currentMonth)
-        // );
-        List<User> userList = dbService.getMonthlyTemperature(
-            String.valueOf(currentYear),
-            String.format("%02d", currentMonth)
-        );
+        // 拼接标准月份格式（yyyy-mm）
+        String yearMonth = String.format("%d-%02d", currentYear, currentMonth);
+
+
+                // ------------------- 2. 解析筛选参数（统一用startDay/endDay） -------------------
+        // 数据库层筛选参数
+        String name = request.getParameter("name");     // 姓名（链2触发条件）
+        String gender = request.getParameter("gender"); // 性别（链1用）
+        // 内存层筛选参数
+        String minAgeStr = request.getParameter("minAge");
+        String maxAgeStr = request.getParameter("maxAge");
+        String areaKeyword = request.getParameter("areaKeyword");
+        String startDayStr = request.getParameter("startDay");
+        String endDayStr = request.getParameter("endDay");
+
+        // ------------------- 构建并校验上下文（强制月份） -------------------
+        QueryContext context = new QueryContext();
+        context.setYearMonth(yearMonth); // 强制设置前端显示的月份
+        context.setName(name);
+        context.setGender(gender);
+        // 解析年龄
+        if (minAgeStr != null && !minAgeStr.isEmpty()) {
+            context.setMinAge(Integer.parseInt(minAgeStr));
+        }
+        if (maxAgeStr != null && !maxAgeStr.isEmpty()) {
+            context.setMaxAge(Integer.parseInt(maxAgeStr));
+        }
+        context.setAreaKeyword(areaKeyword);
+        // 解析日期段（统一用startDay/endDay，链1/链2都用这个）
+        if (startDayStr != null && !startDayStr.isEmpty()) {
+            context.setStartDay(Integer.parseInt(startDayStr));
+        }
+        if (endDayStr != null && !endDayStr.isEmpty()) {
+            context.setEndDay(Integer.parseInt(endDayStr));
+        }
+        context.validate(); // 强制校验月份格式
+
+        // ------------------- 提前选择查询链（核心优化：参数解析后立即选链） -------------------
+        List<User> userList;
+        if (name != null && !name.isEmpty()) {
+            // 链2：姓名 → 日期段（仅姓名+月份查数据库，然后筛日期段）
+            QueryResult result = QueryChainBuilder.buildChain2(context);
+            userList = result.getUserList();
+        } else {
+            // 链1：性别 → 年龄 → 地区 → 日期段（仅性别+月份查数据库，然后筛年龄/地区/日期）
+            QueryResult result = QueryChainBuilder.buildChain1(context);
+            userList = result.getUserList();
+        }
 
 
         // 4. 计算上一月/下一月的年月（用于按钮参数）

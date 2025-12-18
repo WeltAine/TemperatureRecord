@@ -10,6 +10,15 @@ public class User {
     // 无参构造（Jackson解析必需）
     public User() {}
 
+    public User(String name, String gender, int age, String address, double[] temperature) {
+        this.name = name;
+        this.gender = gender;
+        this.age = age;
+        this.address = address;
+        this.temperature = temperature;
+    }
+
+
     // Getter & Setter
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
