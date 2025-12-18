@@ -51,4 +51,14 @@ CREATE TABLE IF NOT EXISTS user_temperature (
 --     '-1,36.8,36.7,36.9,-1,36.8,36.7,-1,36.9,36.8,36.7,36.9,-1,36.8,36.7,36.9,36.8,-1,36.7,36.9,36.8,36.7,-1,36.9,36.8,36.7,36.9,-1,36.8,36.7,-1'
 -- );
 
-SELECT DISTINCT year_month FROM user_temperature;
+-- SELECT DISTINCT year_month FROM user_temperature;
+
+
+CREATE TABLE IF NOT EXISTS admin (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    username TEXT NOT NULL UNIQUE, -- 用户名唯一
+    password TEXT NOT NULL        -- 密码（你手动维护，明文/加密均可）
+);
+
+-- 手动插入初始管理员（示例：用户名admin，密码123456，你可自行修改）
+INSERT OR IGNORE INTO admin (username, password) VALUES ('admin', '123456');

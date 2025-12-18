@@ -210,14 +210,15 @@
     </style>
 </head>
 <body>
-    <!-- 标题栏：上下月按钮 + 标题 + 添加按钮 -->
+    <!-- 标题栏：上下月按钮 + 标题 + 添加按钮 + 退出登录 -->
     <div class="title-container">
         <button class="month-btn" onclick="location.href='temperature?year=${prevYear}&month=${prevMonth}'">上一月</button>
         <h1>${currentYear}年${currentMonth}月体温记录表（仅展示当月测过的用户）</h1>
         <button class="month-btn" onclick="location.href='temperature?year=${nextYear}&month=${nextMonth}'">下一月</button>
         <button class="add-btn" onclick="openAddModal()">添加体温记录</button>
+        <!-- 新增：退出登录按钮 -->
+        <button class="month-btn" style="background-color: #f44336;" onclick="location.href='logoutController'">退出登录</button>
     </div>
-
     <!-- 添加数据弹窗 -->
     <div id="addModal" class="modal">
         <div class="modal-content">
