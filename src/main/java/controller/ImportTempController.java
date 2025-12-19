@@ -1,131 +1,150 @@
 package controller;
 
-import org.apache.commons.fileupload2.core.DiskFileItemFactory;
-import org.apache.commons.fileupload2.core.FileItem;
-import org.apache.commons.fileupload2.core.FileUploadException;
-import org.apache.commons.fileupload2.jakarta.servlet6.JakartaServletFileUpload; // 核心：新导入路径
-import service.TemperatureDBService;
+// 补全所有必要的导入（解决StringWriter等编译错误）
+import java.io.StringWriter;
+import java.io.PrintWriter;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+import java.io.File;
 
-// 保留 Jakarta Servlet 导入（不变）
+import service.TemperatureDBService;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.Part;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Paths;
-import java.util.List;
-
+/**
+ * 导入控制器（带完整日志，排查405错误）
+ */
 @WebServlet("/importTempController")
+@MultipartConfig(
+        maxFileSize = 10 * 1024 * 1024,
+        maxRequestSize = 10 * 1024 * 1024
+)
 public class ImportTempController extends HttpServlet {
     private static final long serialVersionUID = 1L;
     private TemperatureDBService tempService = new TemperatureDBService();
-    // 临时目录（项目内相对路径）
-    private static final String TEMP_DIR = System.getProperty("user.dir") + "/src/main/webapp/WEB-INF/temp_upload";
+    // 日志路径和Service保持一致，统一查看
+    private static final String LOG_FILE_PATH = "O:\\JavaProgram\\Log\\temp_log.txt";
+    // 临时目录用绝对路径，避免路径问题
+    private static final String TEMP_DIR = "O:\\JavaProgram\\TemperatureRecord\\src\\main\\webapp\\WEB-INF\\temp_upload";
 
+    // ========== 1. 日志工具方法（和Service一致） ==========
+    private void writeLog(String content) {
+        try (PrintWriter writer = new PrintWriter(new FileWriter(LOG_FILE_PATH, true))) {
+            writer.println("[" + new java.util.Date() + "] [ImportTempController] " + content);
+        } catch (IOException e) {
+            // 日志写入失败时，打印到控制台，不影响主逻辑
+            System.out.println("[" + new java.util.Date() + "] [ImportTempController] 日志写入失败：" + e.getMessage());
+        }
+    }
+
+    // ========== 2. 控制器初始化日志（确认是否加载） ==========
+    @Override
+    public void init() throws ServletException {
+        super.init();
+        writeLog("===== ImportTempController 初始化完成！控制器已被Tomcat加载 =====");
+    }
+
+    // ========== 3. 核心POST方法（全流程日志） ==========
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+        // 日志1：确认POST请求进入控制器
+        writeLog("收到POST请求，开始处理导入");
         request.setCharacterEncoding("UTF-8");
         response.setContentType("text/html;charset=UTF-8");
 
-        // 1. 检查是否为文件上传请求（新版本API）
-        if (!JakartaServletFileUpload.isMultipartContent(request)) {
-            request.setAttribute("error", "导入失败：不是有效的文件上传请求");
-            forwardToTempPage(request, response, request.getParameter("year"), request.getParameter("month"));
-            return;
-        }
-
-        //2. 初始化文件上传工厂（新版本API，逻辑不变但包路径变）
-        DiskFileItemFactory factory = DiskFileItemFactory.builder()
-                .setPath(Paths.get(TEMP_DIR))
-                .setBufferSize(1024 * 1024)
-                .get(); // 关键：替换 setRepository → setPath，参数为 Path 类型 // 设置临时目录
-
-
-        // 3. 创建上传实例
-        JakartaServletFileUpload<FileItem<DiskFileItemFactory>, DiskFileItemFactory> upload = new JakartaServletFileUpload<>(factory);
-        upload.setFileSizeMax(10L * 1024L * 1024L); // 10MB 限制（long类型）
-
-
-        // 4. 解析上传请求（新版本API：parseRequest 方法参数不变，但类是新的）
-        List<FileItem<DiskFileItemFactory>> items = null;
         try {
-            items = upload.parseRequest(request); // 此处不再报错！
-        } catch (FileUploadException e) {
-            request.setAttribute("error", "文件解析失败：" + e.getMessage());
-            forwardToTempPage(request, response, request.getParameter("year"), request.getParameter("month"));
-            return;
-        }
+            // 日志2：尝试获取上传文件
+            writeLog("开始获取上传的JSON文件（name=jsonFile）");
+            Part filePart = request.getPart("jsonFile");
 
-        // 5. 处理上传的文件（逻辑和旧版本完全一致）
-        File jsonFile = null;
-        String year = getParamOrDefault(request, "year", "2025");
-        String month = getParamOrDefault(request, "month", "12");
-
-        if (items != null && !items.isEmpty()) {
-            for (FileItem<DiskFileItemFactory> item : items) {
-                if (!item.isFormField()) { // 处理文件字段
-                    String fileName = item.getName();
-                    // 校验文件类型
-                    if (fileName == null || fileName.isEmpty() || !fileName.endsWith(".json")) {
-                        request.setAttribute("error", "导入失败：仅支持 .json 格式文件");
-                        forwardToTempPage(request, response, year, month);
-                        return;
-                    }
-                    // 创建临时文件（避免重名）
-                    File tempDir = new File(TEMP_DIR);
-                    if (!tempDir.exists()) {
-                        tempDir.mkdirs();
-                    }
-                    jsonFile = new File(tempDir, System.currentTimeMillis() + "_" + fileName);
-                    // 写入文件（新版本 FileItem 的 write 方法不变）
-                    try {
-                        item.write(jsonFile.toPath());
-                    } catch (Exception e) {
-                        request.setAttribute("error", "文件保存失败：" + e.getMessage());
-                        forwardToTempPage(request, response, year, month);
-                        return;
-                    }
-                }
+            // 日志3：文件校验
+            if (filePart == null || filePart.getSize() == 0) {
+                writeLog("文件校验失败：未选择文件或文件为空（size=" + (filePart == null ? "null" : filePart.getSize()) + "）");
+                request.setAttribute("errorMsg", "导入失败：未选择文件或文件为空");
+                request.getRequestDispatcher("temperature?year=2025&month=12").forward(request, response);
+                return;
             }
-        }
+            writeLog("文件获取成功：文件名=" + getFileName(filePart) + "，文件大小=" + filePart.getSize() + "字节");
 
-        // 6. 调用 Service 导入数据（逻辑不变）
-        if (jsonFile != null && jsonFile.exists()) {
+            // 日志4：创建临时目录和文件
+            writeLog("开始创建临时目录：" + TEMP_DIR);
+            File tempDir = new File(TEMP_DIR);
+            if (!tempDir.exists()) {
+                tempDir.mkdirs();
+                writeLog("临时目录不存在，已创建：" + TEMP_DIR);
+            }
+            File jsonFile = new File(tempDir, "import_temp.json");
+            writeLog("临时文件路径：" + jsonFile.getAbsolutePath());
+
+            // 日志5：写入上传文件到临时目录
+            writeLog("开始写入上传文件到临时目录");
+            try (InputStream is = filePart.getInputStream()) {
+                Files.copy(is, jsonFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            }
+            writeLog("文件写入成功：临时文件大小=" + jsonFile.length() + "字节");
+
+            // 日志6：调用Service导入数据
+            writeLog("开始调用Service导入JSON数据（全部导入，不筛选年月）");
             boolean success = tempService.importMultiTempFromJson(jsonFile);
-            // 删除临时文件
+            writeLog("Service导入结果：" + (success ? "成功" : "失败"));
+
+            // 日志7：删除临时文件
             if (jsonFile.exists()) {
                 jsonFile.delete();
+                writeLog("临时文件已删除");
             }
-            if (success) {
-                request.setAttribute("success", "导入成功！已处理所有月份数据");
-            } else {
-                request.setAttribute("error", "导入失败：JSON 格式错误或数据库异常");
-            }
-        } else {
-            request.setAttribute("error", "导入失败：未选择有效文件");
+
+            // 日志8：返回结果
+            String msg = success ? "导入成功（已更新修改后的月份数据）" : "导入失败（检查JSON格式）";
+            writeLog("导入流程结束：" + msg);
+            // 用session存提示信息
+            request.getSession().setAttribute(success ? "successMsg" : "errorMsg", msg);
+            // 重定向到temperature页面（GET请求，不会报405）
+            response.sendRedirect("temperature?year=2025&month=12");
+        } catch (Exception e) {
+            // 日志9：捕获所有异常，定位问题
+            writeLog("导入流程异常：" + e.getMessage());
+            // 打印异常堆栈到日志（关键：定位具体报错行）
+            String stackTrace = getStackTrace(e);
+            writeLog("异常堆栈：" + stackTrace);
+            // 返回异常提示
+            request.setAttribute("errorMsg", "导入失败：" + e.getMessage());
+            request.getRequestDispatcher("temperature?year=2025&month=12").forward(request, response);
         }
-
-        // 7. 跳转回原页面
-        forwardToTempPage(request, response, year, month);
     }
 
-    // 辅助方法（和旧版本完全一致，无需修改）
-    private String getParamOrDefault(HttpServletRequest request, String paramName, String defaultValue) {
-        String value = request.getParameter(paramName);
-        return (value == null || value.isEmpty()) ? defaultValue : value;
-    }
-
-    private void forwardToTempPage(HttpServletRequest request, HttpServletResponse response, String year, String month) throws ServletException, IOException {
-        request.getRequestDispatcher("temperature?year=" + year + "&month=" + month).forward(request, response);
-    }
-
+    // ========== 4. GET请求日志（避免误访问） ==========
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-        String year = getParamOrDefault(request, "year", "2025");
-        String month = getParamOrDefault(request, "month", "12");
-        response.sendRedirect(request.getContextPath() + "/temperature?year=" + year + "&month=" + month);
+        writeLog("收到GET请求：此接口仅支持POST上传文件，已拒绝");
+        response.getWriter().write("此接口仅支持POST上传JSON文件（导出的格式）");
+    }
+
+    // ========== 辅助方法：获取上传文件名 ==========
+    private String getFileName(Part part) {
+        String contentDisposition = part.getHeader("content-disposition");
+        for (String cd : contentDisposition.split(";")) {
+            if (cd.trim().startsWith("filename")) {
+                return cd.substring(cd.indexOf('=') + 1).trim().replace("\"", "");
+            }
+        }
+        return "未知文件名.json";
+    }
+
+    // ========== 辅助方法：获取异常堆栈字符串（修正编译错误） ==========
+    private String getStackTrace(Exception e) {
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        e.printStackTrace(pw);
+        pw.close();
+        return sw.toString();
     }
 }

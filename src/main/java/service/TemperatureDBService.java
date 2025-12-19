@@ -385,4 +385,89 @@ public class TemperatureDBService {
             return false;
         }
     }
+
+    // 修改后的方法签名（添加年、月参数）
+    public boolean importMultiTempFromJson(File jsonFile, int year, int month) {
+                // 1. 基础文件校验（复用原有逻辑）
+        if (!jsonFile.exists() || !jsonFile.isFile()) {
+            writeLog("导入失败：文件不存在或不是合法文件");
+            return false;
+        }
+
+        // 2. 生成目标年月格式（和原有代码保持一致：yyyy-MM）
+        String targetYearMonth = year + "-" + String.format("%02d", month);
+
+        Gson gson = new Gson();
+        MultiTempExportVO importVO = null;
+        // 3. 解析JSON文件（复用原有逻辑）
+        try (FileReader reader = new FileReader(jsonFile)) {
+            importVO = gson.fromJson(reader, MultiTempExportVO.class);
+        } catch (IOException e) {
+            writeLog("JSON 文件解析失败：" + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+
+        // 4. 校验解析结果（复用原有逻辑）
+        if (importVO == null || importVO.getTempRecords() == null || importVO.getTempRecords().isEmpty()) {
+            writeLog("导入失败：JSON 数据格式错误，无有效体温记录");
+            return false;
+        }
+
+        // 5. 加载驱动（复用原有逻辑）
+        if (!loadDriver()) {
+            return false;
+        }
+
+        // 6. 批量导入指定年月的数据（仅筛选目标年月，其余复用）
+        try (Connection conn = DriverManager.getConnection(DB_URL)) {
+            conn.setAutoCommit(false);
+            String insertSql = "INSERT OR REPLACE INTO user_temperature " +
+                    "(name, gender, age, address, temperature, year_month) " +
+                    "VALUES (?, ?, ?, ?, ?, ?)";
+
+            int totalImport = 0;
+            // 仅遍历匹配目标年月的记录
+            for (SingleMonthTempVO singleVO : importVO.getTempRecords()) {
+                String yearMonth = singleVO.getYearMonth();
+                List<User> users = singleVO.getUsers();
+                // 核心筛选：只处理和目标年月匹配的记录
+                if (yearMonth == null || !yearMonth.equals(targetYearMonth) || users == null || users.isEmpty()) {
+                    continue;
+                }
+
+                // 导入逻辑完全复用原有代码
+                for (User user : users) {
+                    double[] tempArr = user.getTemperature();
+                    StringBuilder tempStr = new StringBuilder();
+                    for (int i = 0; i < tempArr.length; i++) {
+                        tempStr.append(tempArr[i]);
+                        if (i != tempArr.length - 1) {
+                            tempStr.append(",");
+                        }
+                    }
+
+                    PreparedStatement pstmt = conn.prepareStatement(insertSql);
+                    pstmt.setString(1, user.getName());
+                    pstmt.setString(2, user.getGender());
+                    pstmt.setInt(3, user.getAge());
+                    pstmt.setString(4, user.getAddress());
+                    pstmt.setString(5, tempStr.toString());
+                    pstmt.setString(6, yearMonth);
+                    pstmt.executeUpdate();
+                    pstmt.close();
+                    totalImport++;
+                }
+            }
+
+            conn.commit();
+            writeLog("指定年月 JSON 导入成功：[" + targetYearMonth + "] 共导入 " + totalImport + " 条用户记录");
+            return true;
+
+        } catch (SQLException e) {
+            writeLog("指定年月导入数据库异常：" + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
 }

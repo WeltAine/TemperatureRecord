@@ -80,26 +80,21 @@
         </dependency>
 
 
-        <!-- 核心：使用 Jakarta 适配版 FileUpload（官方维护） -->
 
 
-    <!-- FileUpload2 核心包（必须） -->
-    <dependency>
-        <groupId>org.apache.commons</groupId>
-        <artifactId>commons-fileupload2-core</artifactId>
-        <version>2.0.0-M2</version>
-    </dependency>
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-fileupload2-jakarta-servlet6</artifactId>
-            <version>2.0.0-M2</version>
-        </dependency>
         <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
             <version>2.15.1</version>
         </dependency>
 
+        <!-- 3. Jakarta Servlet API（Tomcat内置，仅编译依赖） -->
+        <dependency>
+            <groupId>jakarta.servlet</groupId>
+            <artifactId>jakarta.servlet-api</artifactId>
+            <version>${jakarta.servlet.version}</version>
+            <scope>provided</scope>
+        </dependency>
 
         <!-- 关键修正：Jakarta JSP API（Tomcat 10+ 专用） -->
         <dependency>

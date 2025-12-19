@@ -219,9 +219,35 @@
         <!-- 新增：导入JSON按钮 -->
         <button class="add-btn" onclick="openImportModal()">导入JSON数据</button>
         <!-- 新增：导出JSON按钮 -->
-        <button class="add-btn" onclick="location.href='exportTempController?year=${currentYear}&month=${currentMonth}'">导出JSON数据</button>
+        <button class="add-btn" onclick="location.href='exportAllTempController?year=${currentYear}&month=${currentMonth}'">导出JSON数据</button>
         <button class="month-btn" style="background-color: #f44336;" onclick="location.href='logoutController'">退出登录</button>
     </div>
+
+    <!-- ========== 新增：导入/添加提示信息（粘贴到这里） ========== -->
+    <%
+        // 读取session中的成功/失败提示
+        String successMsg = (String) session.getAttribute("successMsg");
+        String errorMsg = (String) session.getAttribute("errorMsg");
+        // 显示成功提示（绿色）
+        if (successMsg != null) {
+    %>
+            <div style="color: #2ecc71; font-weight: bold; text-align: center; margin: 10px 0; font-size: 16px;">
+                ✅ <%= successMsg %>
+            </div>
+            <% session.removeAttribute("successMsg"); // 用完立即删除，避免重复显示 %>
+    <%
+        }
+        // 显示失败提示（红色）
+        if (errorMsg != null) {
+    %>
+            <div style="color: #e74c3c; font-weight: bold; text-align: center; margin: 10px 0; font-size: 16px;">
+                ❌ <%= errorMsg %>
+            </div>
+            <% session.removeAttribute("errorMsg"); // 用完立即删除 %>
+    <%
+        }
+    %>
+
     <!-- 添加数据弹窗 -->
     <div id="addModal" class="modal">
         <div class="modal-content">
@@ -288,7 +314,7 @@
     <div id="importModal" class="modal">
         <div class="modal-content">
             <span class="modal-close" onclick="closeImportModal()">&times;</span>
-            <h3>导入${currentYear}年${currentMonth}月体温数据</h3>
+            <h3>导入体温数据</h3>
             <form id="importForm" method="post" action="importTempController" enctype="multipart/form-data">
                 <input type="hidden" name="year" value="${currentYear}">
                 <input type="hidden" name="month" value="${currentMonth}">

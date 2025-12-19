@@ -4,6 +4,16 @@
          xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee https://jakarta.ee/xml/ns/jakartaee/web-app_6_0.xsd"
          version="6.0">
 
+    <!-- 手动映射导入控制器（彻底替代@WebServlet注解）
+    <servlet>
+        <servlet-name>ImportTempController</servlet-name>
+        <servlet-class>controller.ImportTempController</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>ImportTempController</servlet-name>
+        <url-pattern>/importTempController</url-pattern>
+    </servlet-mapping> -->
+
     <!-- 可选：如果不用@WebFilter注解，可手动配置过滤器（二选一即可） -->
     <!--
     <filter>
