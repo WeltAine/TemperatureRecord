@@ -210,13 +210,16 @@
     </style>
 </head>
 <body>
-    <!-- 标题栏：上下月按钮 + 标题 + 添加按钮 + 退出登录 -->
+    <!-- 标题栏：新增导入/导出按钮 -->
     <div class="title-container">
         <button class="month-btn" onclick="location.href='temperature?year=${prevYear}&month=${prevMonth}'">上一月</button>
         <h1>${currentYear}年${currentMonth}月体温记录表（仅展示当月测过的用户）</h1>
         <button class="month-btn" onclick="location.href='temperature?year=${nextYear}&month=${nextMonth}'">下一月</button>
         <button class="add-btn" onclick="openAddModal()">添加体温记录</button>
-        <!-- 新增：退出登录按钮 -->
+        <!-- 新增：导入JSON按钮 -->
+        <button class="add-btn" onclick="openImportModal()">导入JSON数据</button>
+        <!-- 新增：导出JSON按钮 -->
+        <button class="add-btn" onclick="location.href='exportTempController?year=${currentYear}&month=${currentMonth}'">导出JSON数据</button>
         <button class="month-btn" style="background-color: #f44336;" onclick="location.href='logoutController'">退出登录</button>
     </div>
     <!-- 添加数据弹窗 -->
@@ -225,7 +228,6 @@
             <span class="modal-close" onclick="closeAddModal()">&times;</span>
             <h3>添加${currentYear}年${currentMonth}月体温记录</h3>
             <form id="addForm" method="post" action="addTempController">
-                <!-- 隐藏域：传递当前年月（月份固定） -->
                 <input type="hidden" name="year" value="${currentYear}">
                 <input type="hidden" name="month" value="${currentMonth}">
                 
@@ -248,7 +250,6 @@
                 <div class="modal-form-item">
                     <label>日期：</label>
                     <%
-                        // 获取当天日期作为默认值（格式：dd）
                         SimpleDateFormat sdf = new SimpleDateFormat("dd");
                         String today = sdf.format(new Date());
                     %>
@@ -269,7 +270,6 @@
             <span class="modal-close" onclick="closeUpdateModal()">&times;</span>
             <h3>修改体温</h3>
             <form id="updateForm" method="post" action="updateTempController">
-                <!-- 隐藏域：传递用户姓名、年月、日期 -->
                 <input type="hidden" name="name" id="updateName">
                 <input type="hidden" name="year" value="${currentYear}">
                 <input type="hidden" name="month" value="${currentMonth}">
@@ -280,6 +280,24 @@
                     <input type="number" name="temperature" id="updateTemp" step="0.1" placeholder="如：36.5（空则清空）">
                 </div>
                 <button type="submit" class="modal-submit">保存</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 新增：导入JSON弹窗（极简风格，和原有弹窗一致） -->
+    <div id="importModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeImportModal()">&times;</span>
+            <h3>导入${currentYear}年${currentMonth}月体温数据</h3>
+            <form id="importForm" method="post" action="importTempController" enctype="multipart/form-data">
+                <input type="hidden" name="year" value="${currentYear}">
+                <input type="hidden" name="month" value="${currentMonth}">
+                
+                <div class="modal-form-item">
+                    <label>选择文件：</label>
+                    <input type="file" name="jsonFile" required accept=".json" style="width: 200px;">
+                </div>
+                <button type="submit" class="modal-submit">导入</button>
             </form>
         </div>
     </div>
@@ -321,7 +339,6 @@
         </form>
     </div>
 
-    <!-- 无数据提示 -->
     <% if (request.getAttribute("noDataTip") != null) { %>
         <div class="no-data"><%= request.getAttribute("noDataTip") %></div>
     <% } %>
@@ -334,7 +351,6 @@
                 <th colspan="31">日期</th>
             </tr>
             <tr>
-                <%-- 生成1-31天表头 --%>
                 <% for (int i = 1; i <= 31; i++) { %>
                     <th><%= String.format("%02d", i) %>日</th>
                 <% } %>
@@ -342,13 +358,11 @@
         </thead>
         <tbody>
             <%
-                // 从request获取用户列表
                 List<User> userList = (List<User>) request.getAttribute("userList");
                 if (userList != null && !userList.isEmpty()) {
                     for (User user : userList) {
                         double[] tempArr = user.getTemperature();
                         
-                        // 转义单引号，避免JS弹窗语法错误
                         String name = user.getName() == null ? "" : user.getName().replace("'", "\\'");
                         String gender = user.getGender() == null ? "" : user.getGender().replace("'", "\\'");
                         String address = user.getAddress() == null ? "" : user.getAddress().replace("'", "\\'");
@@ -356,21 +370,18 @@
                         String detailInfo = "姓名：" + name + "\\n性别：" + gender + "\\n年龄：" + age + "\\n住址：" + address;
             %>
                 <tr>
-                    <!-- 姓名单元格（点击显示详情弹窗） -->
                     <td class="name-cell">
                         <span class="user-name" onclick="alert('<%= detailInfo %>')">
                             <%= user.getName() %>
                         </span>
                     </td>
                     <%
-                        // 渲染1-31天体温单元格
                         for (int i = 0; i < 31; i++) {
                             double temp = (tempArr != null && i < tempArr.length) ? tempArr[i] : -1;
                             String tempStr = (temp == -1) ? "" : String.valueOf(temp);
-                            int day = i + 1; // 日期（1-31）
+                            int day = i + 1;
                     %>
-                        <!-- 体温单元格（点击打开修改弹窗） -->
-                        <td class="temp-cell" onclick="openUpdateModal('<%= user.getName() %>', <%= day %>, '<%= tempStr %>')">
+                        <td class="temp-cell" data-name="<%= user.getName() %>" data-day="<%= day %>" data-temp="<%= tempStr %>" onclick="openUpdateModal(this)">
                             <%= tempStr %>
                         </td>
                     <% } %>
@@ -388,44 +399,49 @@
         </tbody>
     </table>
 
-    <!-- 弹窗控制JS -->
+    <!-- 弹窗控制JS：仅新增导入弹窗的基础控制 -->
     <script>
-        // ========== 添加弹窗控制 ==========
+        // 添加弹窗
         function openAddModal() {
             document.getElementById("addModal").style.display = "block";
         }
-
         function closeAddModal() {
             document.getElementById("addModal").style.display = "none";
         }
 
-        // ========== 修改弹窗控制 ==========
-        function openUpdateModal(name, day, temp) {
-            // 给隐藏域和输入框赋值
+        // 修改弹窗
+        function openUpdateModal(td) {
+            var name = td.dataset.name;
+            var day = td.dataset.day;
+            var temp = td.dataset.temp;
             document.getElementById("updateName").value = name;
             document.getElementById("updateDay").value = day;
             document.getElementById("updateTemp").value = temp === "" ? "" : temp;
-            // 显示弹窗
             document.getElementById("updateModal").style.display = "block";
         }
-
         function closeUpdateModal() {
             document.getElementById("updateModal").style.display = "none";
         }
 
-        // 点击弹窗外部关闭
+        // 新增：导入弹窗
+        function openImportModal() {
+            document.getElementById("importModal").style.display = "block";
+        }
+        function closeImportModal() {
+            document.getElementById("importModal").style.display = "none";
+        }
+
+        // 点击外部关闭弹窗
         window.onclick = function(event) {
             var addModal = document.getElementById("addModal");
             var updateModal = document.getElementById("updateModal");
-            if (event.target == addModal) {
-                closeAddModal();
-            }
-            if (event.target == updateModal) {
-                closeUpdateModal();
-            }
+            var importModal = document.getElementById("importModal");
+            if (event.target == addModal) closeAddModal();
+            if (event.target == updateModal) closeUpdateModal();
+            if (event.target == importModal) closeImportModal();
         }
 
-        // 表单提交前的简单验证（可选）
+        // 原有简单验证（无修改）
         document.getElementById("addForm")?.addEventListener("submit", function(e) {
             var temp = this.querySelector('input[name="temperature"]').value;
             if (temp && (parseFloat(temp) < 35 || parseFloat(temp) > 42)) {
@@ -433,7 +449,6 @@
                 e.preventDefault();
             }
         });
-
         document.getElementById("updateForm")?.addEventListener("submit", function(e) {
             var temp = this.querySelector('input[name="temperature"]').value;
             if (temp && (parseFloat(temp) < 35 || parseFloat(temp) > 42)) {

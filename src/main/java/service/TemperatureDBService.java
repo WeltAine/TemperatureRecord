@@ -1,14 +1,22 @@
 package service;
 
+
+import com.google.gson.Gson;
+import model.MultiTempExportVO;
+import model.SingleMonthTempVO;
 import model.User;
 
+import java.io.File;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class TemperatureDBService {
 
@@ -225,5 +233,156 @@ public class TemperatureDBService {
             e.printStackTrace();
         }
         return null;
+    }
+
+
+    //导入导出功能
+        // ========== 新增：查询所有月份的体温数据 ==========
+    public Map<String, List<User>> getAllMonthTemperature() {
+        Map<String, List<User>> allMonthData = new HashMap<>();
+        if (!loadDriver()) {
+            return allMonthData;
+        }
+
+        String sql = "SELECT name, gender, age, address, temperature, year_month FROM user_temperature";
+        try (Connection conn = DriverManager.getConnection(DB_URL);
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+
+            while (rs.next()) {
+                String yearMonth = rs.getString("year_month");
+                // 初始化该年月的用户列表
+                if (!allMonthData.containsKey(yearMonth)) {
+                    allMonthData.put(yearMonth, new ArrayList<>());
+                }
+
+                // 封装 User 对象
+                User user = new User();
+                user.setName(rs.getString("name"));
+                user.setGender(rs.getString("gender"));
+                user.setAge(rs.getInt("age"));
+                user.setAddress(rs.getString("address"));
+                
+                String tempStr = rs.getString("temperature");
+                if (tempStr != null && !tempStr.isEmpty()) {
+                    String[] tempArrStr = tempStr.split(",");
+                    double[] tempArr = new double[tempArrStr.length];
+                    for (int i = 0; i < tempArrStr.length; i++) {
+                        tempArr[i] = Double.parseDouble(tempArrStr[i]);
+                    }
+                    user.setTemperature(tempArr);
+                } else {
+                    user.setTemperature(new double[31]);
+                }
+
+                allMonthData.get(yearMonth).add(user);
+            }
+            writeLog("查询所有月份数据成功，共 " + allMonthData.size() + " 个年月");
+
+        } catch (SQLException e) {
+            writeLog("查询所有月份数据异常：" + e.getMessage());
+            e.printStackTrace();
+        }
+        return allMonthData;
+    }
+
+    // ========== 修改：导出所有月份数据为 JSON ==========
+    public String exportAllTempToJson() {
+        // 1. 查询所有月份数据
+        Map<String, List<User>> allMonthData = getAllMonthTemperature();
+        if (allMonthData.isEmpty()) {
+            writeLog("导出失败：暂无任何体温数据");
+            return null;
+        }
+
+        // 2. 封装为多月份 VO
+        List<SingleMonthTempVO> tempRecords = new ArrayList<>();
+        for (Map.Entry<String, List<User>> entry : allMonthData.entrySet()) {
+            tempRecords.add(new SingleMonthTempVO(entry.getKey(), entry.getValue()));
+        }
+        MultiTempExportVO exportVO = new MultiTempExportVO(tempRecords);
+
+        // 3. Gson 转为格式化的 JSON 字符串
+        Gson gson = new Gson();
+        return gson.toJson(exportVO);
+    }
+
+    // ========== 修改：导入多月份 JSON 数据 ==========
+    public boolean importMultiTempFromJson(File jsonFile) {
+        if (!jsonFile.exists() || !jsonFile.isFile()) {
+            writeLog("导入失败：文件不存在或不是合法文件");
+            return false;
+        }
+
+        Gson gson = new Gson();
+        MultiTempExportVO importVO = null;
+        // 1. 解析多月份 JSON 文件
+        try (FileReader reader = new FileReader(jsonFile)) {
+            importVO = gson.fromJson(reader, MultiTempExportVO.class);
+        } catch (IOException e) {
+            writeLog("JSON 文件解析失败：" + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+
+        if (importVO == null || importVO.getTempRecords() == null || importVO.getTempRecords().isEmpty()) {
+            writeLog("导入失败：JSON 数据格式错误，无有效体温记录");
+            return false;
+        }
+
+        // 2. 批量导入多月份数据到数据库
+        if (!loadDriver()) {
+            return false;
+        }
+
+        try (Connection conn = DriverManager.getConnection(DB_URL)) {
+            conn.setAutoCommit(false); // 事务批量处理
+            String insertSql = "INSERT OR REPLACE INTO user_temperature " +
+                    "(name, gender, age, address, temperature, year_month) " +
+                    "VALUES (?, ?, ?, ?, ?, ?)";
+
+            int totalImport = 0;
+            // 循环每个年月导入
+            for (SingleMonthTempVO singleVO : importVO.getTempRecords()) {
+                String yearMonth = singleVO.getYearMonth();
+                List<User> users = singleVO.getUsers();
+                if (yearMonth == null || users == null || users.isEmpty()) {
+                    continue;
+                }
+
+                // 导入该年月的所有用户
+                for (User user : users) {
+                    // 体温数组转字符串
+                    double[] tempArr = user.getTemperature();
+                    StringBuilder tempStr = new StringBuilder();
+                    for (int i = 0; i < tempArr.length; i++) {
+                        tempStr.append(tempArr[i]);
+                        if (i != tempArr.length - 1) {
+                            tempStr.append(",");
+                        }
+                    }
+
+                    PreparedStatement pstmt = conn.prepareStatement(insertSql);
+                    pstmt.setString(1, user.getName());
+                    pstmt.setString(2, user.getGender());
+                    pstmt.setInt(3, user.getAge());
+                    pstmt.setString(4, user.getAddress());
+                    pstmt.setString(5, tempStr.toString());
+                    pstmt.setString(6, yearMonth);
+                    pstmt.executeUpdate();
+                    pstmt.close();
+                    totalImport++;
+                }
+            }
+
+            conn.commit();
+            writeLog("多月份 JSON 导入成功：共导入 " + totalImport + " 条用户记录");
+            return true;
+
+        } catch (SQLException e) {
+            writeLog("多月份导入数据库异常：" + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
     }
 }

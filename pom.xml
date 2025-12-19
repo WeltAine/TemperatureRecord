@@ -16,6 +16,7 @@
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <jackson.version>2.16.1</jackson.version>
+        <jakarta.servlet.version>5.0.0</jakarta.servlet.version> <!-- Tomcat 10.1 适配的版本 -->
     </properties>
 
     <!-- 仅保留核心依赖 -->
@@ -24,7 +25,8 @@
         <dependency>
             <groupId>jakarta.servlet</groupId>
             <artifactId>jakarta.servlet-api</artifactId>
-            <version>5.0.0</version> <!-- 稳定版，中央仓库可下载 -->
+            <version>${jakarta.servlet.version}</version>
+            <!-- <version>5.0.0</version> 稳定版，中央仓库可下载 -->
             <scope>provided</scope> <!-- Tomcat内置，仅编译用 -->
         </dependency>
 
@@ -68,6 +70,51 @@
             <groupId>org.xerial</groupId>
             <artifactId>sqlite-jdbc</artifactId>
             <version>3.45.2.0</version>
+        </dependency>
+
+        <!-- 1. JSON 解析：Gson -->
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.10.1</version>
+        </dependency>
+
+
+        <!-- 核心：使用 Jakarta 适配版 FileUpload（官方维护） -->
+
+
+    <!-- FileUpload2 核心包（必须） -->
+    <dependency>
+        <groupId>org.apache.commons</groupId>
+        <artifactId>commons-fileupload2-core</artifactId>
+        <version>2.0.0-M2</version>
+    </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-fileupload2-jakarta-servlet6</artifactId>
+            <version>2.0.0-M2</version>
+        </dependency>
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.15.1</version>
+        </dependency>
+
+
+        <!-- 关键修正：Jakarta JSP API（Tomcat 10+ 专用） -->
+        <dependency>
+            <groupId>jakarta.servlet.jsp</groupId>
+            <artifactId>jakarta.servlet.jsp-api</artifactId>
+            <version>3.1.0</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <!-- 可选：Jakarta EL API（JSP 表达式语言） -->
+        <dependency>
+            <groupId>jakarta.el</groupId>
+            <artifactId>jakarta.el-api</artifactId>
+            <version>5.0.0</version>
+            <scope>provided</scope>
         </dependency>
 
 
