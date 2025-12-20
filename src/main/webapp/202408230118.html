@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>体温记录系统 - 登录信息</title>
+    <!-- 简单样式，让内容居中、美观 -->
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "微软雅黑", sans-serif;
+        }
+        body {
+            background-color: #f5f5f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            background-color: white;
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        .logo-img {
+            width: 200px;
+            height: auto;
+            margin-bottom: 30px;
+            border-radius: 4px;
+        }
+        .login-info {
+            font-size: 18px;
+            line-height: 2.5;
+            color: #333;
+            margin-bottom: 30px;
+        }
+        .login-info span {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .main-link {
+            display: inline-block;
+            padding: 12px 30px;
+            background-color: #3498db;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        .main-link:hover {
+            background-color: #2980b9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 图片：替换为你自己的图片路径（建议放在webapp/images/下） -->
+        <img src="images/system-logo.png" alt="系统logo" class="logo-img">
+        
+        <!-- 登录账号密码提示 -->
+        <div class="login-info">
+            <p>账号：<span>admin</span></p>
+            <p>密码：<span>123456</span></p>
+        </div>
+        
+        <!-- 链接到体温记录程序主页面（核心） -->
+        <a href="temperature" class="main-link">进入体温记录系统</a>
+    </div>
+</body>
+</html>

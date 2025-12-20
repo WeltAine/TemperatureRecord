@@ -30,8 +30,13 @@
     </filter-mapping>
     -->
 
-    <!-- 欢迎页配置 -->
+    <!-- 新增：默认访问页面配置 -->
     <welcome-file-list>
-        <welcome-file>temperature</welcome-file>
+        <welcome-file>202408230118.html</welcome-file>
     </welcome-file-list>
+
+    <!-- 欢迎页配置 -->
+    <!-- <welcome-file-list>
+        <welcome-file>temperature</welcome-file>
+    </welcome-file-list> -->
 </web-app>
