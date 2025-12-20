@@ -52,9 +52,6 @@ public class TemperatureController extends HttpServlet {
         int currentYear = 2025;
         int currentMonth = 12;
 
-        // 写入前端传递的参数到日志
-        writeLog("前端传递的年参数：" + currentYearStr + "，月参数：" + currentMonthStr);
-
 
         // 2. 解析前端传递的年月参数
         if (currentYearStr != null && !currentYearStr.isEmpty()) {
@@ -64,14 +61,12 @@ public class TemperatureController extends HttpServlet {
             currentMonth = Integer.parseInt(currentMonthStr);
         }
 
-        // 写入解析后的参数
-        writeLog("解析后的年：" + currentYear + "，月：" + currentMonth);
 
         // 拼接标准月份格式（yyyy-mm）
         String yearMonth = String.format("%d-%02d", currentYear, currentMonth);
 
 
-                // ------------------- 2. 解析筛选参数（统一用startDay/endDay） -------------------
+        // ------------------- 2. 解析筛选参数（统一用startDay/endDay） -------------------
         // 数据库层筛选参数
         String name = request.getParameter("name");     // 姓名（链2触发条件）
         String gender = request.getParameter("gender"); // 性别（链1用）
@@ -135,9 +130,6 @@ public class TemperatureController extends HttpServlet {
         // 5. 无对应JSON文件（用户列表为空），则保持原年月（可选：提示无数据）
         if (userList.isEmpty()) {
             request.setAttribute("noDataTip", "暂无" + currentYear + "年" + currentMonth + "月的体温记录");
-            writeLog("查询结果为空，设置无数据提示");
-        }else{
-            writeLog("查询结果不为空，共" + userList.size() + "条记录");
         }
 
 

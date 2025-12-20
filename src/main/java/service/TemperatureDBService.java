@@ -36,10 +36,8 @@ public class TemperatureDBService {
     private boolean loadDriver() {
         try {
             Class.forName("org.sqlite.JDBC");
-            writeLog("SQLite驱动加载成功！");
             return true;
         } catch (ClassNotFoundException e) {
-            writeLog("SQLite驱动加载失败：" + e.getMessage());
             return false;
         }
     }
@@ -52,17 +50,14 @@ public class TemperatureDBService {
         }
 
         String workDir = System.getProperty("user.dir");
-        writeLog("当前工作目录：" + workDir);
 
         String yearMonth = year + "-" + String.format("%02d", Integer.parseInt(month));
-        writeLog("查询的年月：" + yearMonth);
 
         try (Connection conn = DriverManager.getConnection(DB_URL);
              PreparedStatement pstmt = conn.prepareStatement(
                  "SELECT name, gender, age, address, temperature FROM user_temperature WHERE year_month = ?"
              )) {
 
-            writeLog("数据库连接成功！");
             pstmt.setString(1, yearMonth);
             ResultSet rs = pstmt.executeQuery();
 
@@ -88,13 +83,10 @@ public class TemperatureDBService {
                 userList.add(user);
                 count++;
             }
-            writeLog("查询到的记录数：" + count);
 
         } catch (SQLException e) {
-            writeLog("数据库查询异常：" + e.getMessage());
             StringWriter sw = new StringWriter();
             e.printStackTrace(new PrintWriter(sw));
-            writeLog("异常堆栈：" + sw.toString());
             e.printStackTrace();
         }
         return userList;
@@ -131,14 +123,11 @@ public class TemperatureDBService {
 
             int rows = pstmt.executeUpdate();
             boolean success = rows > 0;
-            writeLog("添加记录" + (success ? "成功" : "失败") + "，姓名：" + user.getName() + "，年月：" + yearMonth);
             return success;
 
         } catch (SQLException e) {
-            writeLog("添加记录异常（姓名：" + user.getName() + "）：" + e.getMessage());
             StringWriter sw = new StringWriter();
             e.printStackTrace(new PrintWriter(sw));
-            writeLog("异常堆栈：" + sw.toString());
             e.printStackTrace();
             return false;
         }
@@ -175,14 +164,11 @@ public class TemperatureDBService {
 
             int rows = pstmt.executeUpdate();
             boolean success = rows > 0;
-            writeLog("修改记录" + (success ? "成功" : "失败") + "，姓名：" + user.getName() + "，年月：" + yearMonth);
             return success;
 
         } catch (SQLException e) {
-            writeLog("修改记录异常（姓名：" + user.getName() + "）：" + e.getMessage());
             StringWriter sw = new StringWriter();
             e.printStackTrace(new PrintWriter(sw));
-            writeLog("异常堆栈：" + sw.toString());
             e.printStackTrace();
             return false;
         }
@@ -226,10 +212,8 @@ public class TemperatureDBService {
             }
 
         } catch (SQLException e) {
-            writeLog("查询单个用户异常（姓名：" + name + "，年月：" + yearMonth + "）：" + e.getMessage());
             StringWriter sw = new StringWriter();
             e.printStackTrace(new PrintWriter(sw));
-            writeLog("异常堆栈：" + sw.toString());
             e.printStackTrace();
         }
         return null;
@@ -277,10 +261,8 @@ public class TemperatureDBService {
 
                 allMonthData.get(yearMonth).add(user);
             }
-            writeLog("查询所有月份数据成功，共 " + allMonthData.size() + " 个年月");
 
         } catch (SQLException e) {
-            writeLog("查询所有月份数据异常：" + e.getMessage());
             e.printStackTrace();
         }
         return allMonthData;
@@ -291,7 +273,6 @@ public class TemperatureDBService {
         // 1. 查询所有月份数据
         Map<String, List<User>> allMonthData = getAllMonthTemperature();
         if (allMonthData.isEmpty()) {
-            writeLog("导出失败：暂无任何体温数据");
             return null;
         }
 
@@ -310,7 +291,6 @@ public class TemperatureDBService {
     // ========== 修改：导入多月份 JSON 数据 ==========
     public boolean importMultiTempFromJson(File jsonFile) {
         if (!jsonFile.exists() || !jsonFile.isFile()) {
-            writeLog("导入失败：文件不存在或不是合法文件");
             return false;
         }
 
@@ -320,13 +300,11 @@ public class TemperatureDBService {
         try (FileReader reader = new FileReader(jsonFile)) {
             importVO = gson.fromJson(reader, MultiTempExportVO.class);
         } catch (IOException e) {
-            writeLog("JSON 文件解析失败：" + e.getMessage());
             e.printStackTrace();
             return false;
         }
 
         if (importVO == null || importVO.getTempRecords() == null || importVO.getTempRecords().isEmpty()) {
-            writeLog("导入失败：JSON 数据格式错误，无有效体温记录");
             return false;
         }
 
@@ -376,11 +354,9 @@ public class TemperatureDBService {
             }
 
             conn.commit();
-            writeLog("多月份 JSON 导入成功：共导入 " + totalImport + " 条用户记录");
             return true;
 
         } catch (SQLException e) {
-            writeLog("多月份导入数据库异常：" + e.getMessage());
             e.printStackTrace();
             return false;
         }
@@ -390,7 +366,6 @@ public class TemperatureDBService {
     public boolean importMultiTempFromJson(File jsonFile, int year, int month) {
                 // 1. 基础文件校验（复用原有逻辑）
         if (!jsonFile.exists() || !jsonFile.isFile()) {
-            writeLog("导入失败：文件不存在或不是合法文件");
             return false;
         }
 
@@ -403,14 +378,12 @@ public class TemperatureDBService {
         try (FileReader reader = new FileReader(jsonFile)) {
             importVO = gson.fromJson(reader, MultiTempExportVO.class);
         } catch (IOException e) {
-            writeLog("JSON 文件解析失败：" + e.getMessage());
             e.printStackTrace();
             return false;
         }
 
         // 4. 校验解析结果（复用原有逻辑）
         if (importVO == null || importVO.getTempRecords() == null || importVO.getTempRecords().isEmpty()) {
-            writeLog("导入失败：JSON 数据格式错误，无有效体温记录");
             return false;
         }
 
@@ -461,11 +434,9 @@ public class TemperatureDBService {
             }
 
             conn.commit();
-            writeLog("指定年月 JSON 导入成功：[" + targetYearMonth + "] 共导入 " + totalImport + " 条用户记录");
             return true;
 
         } catch (SQLException e) {
-            writeLog("指定年月导入数据库异常：" + e.getMessage());
             e.printStackTrace();
             return false;
         }
