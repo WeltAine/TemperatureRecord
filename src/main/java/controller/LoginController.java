@@ -1,7 +1,7 @@
 package controller;
 
 import service.AdminService;
-
+import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -16,6 +16,14 @@ import java.io.IOException;
 @WebServlet("/loginController")
 public class LoginController extends HttpServlet {
     private AdminService adminService = new AdminService();
+
+    @Override
+    public void init() throws ServletException {
+        super.init();
+        // 初始化数据库路径
+        ServletContext servletContext = this.getServletContext();
+        adminService.initDBPath(servletContext);
+    }
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {

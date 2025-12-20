@@ -3,16 +3,36 @@ package service.query;
 import model.User;
 import model.QueryResult;
 import model.QueryContext;
+
+import java.io.File;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+
+import jakarta.servlet.ServletContext;
 
 // 基础查询类：仅负责「月份」的数据库查询，返回当前月份所有数据
 public class BaseTemperatureQuery implements TemperatureQuery {
     // SQLite驱动类名
     private static final String DRIVER_CLASS = "org.sqlite.JDBC";
     // 数据库绝对路径（替换为你的实际路径）
-    private static final String DB_URL = "jdbc:sqlite:O:\\JavaProgram\\TemperatureRecord\\db\\user_temperature.db";
+    // private static final String DB_URL = "jdbc:sqlite:O:\\JavaProgram\\TemperatureRecord\\db\\user_temperature.db";
+    private String DB_URL;
+
+
+    // 初始化数据库路径（由控制器调用，传递ServletContext）
+    public void initDBPath(ServletContext servletContext) {
+        // 获取WEB-INF的真实部署路径（适配任意电脑的Tomcat）
+        String webInfPath = servletContext.getRealPath("/WEB-INF");
+        // 拼接数据库文件路径：WEB-INF/user_temperature.db
+        File dbFile = new File(webInfPath, "user_temperature.db");
+        // 生成SQLite的JDBC URL
+        this.DB_URL = "jdbc:sqlite:" + dbFile.getAbsolutePath();
+        // 日志记录路径（方便排查）
+    }
+
+
+
     // 筛选上下文（仅用yearMonth）
     private QueryContext context;
 
@@ -36,7 +56,7 @@ public class BaseTemperatureQuery implements TemperatureQuery {
         // 数据库层仅执行：查询当前月份的所有数据（无任何其他筛选）
         String sql = "SELECT name, gender, age, address, temperature FROM user_temperature WHERE year_month = ?";
 
-        try (Connection conn = DriverManager.getConnection(DB_URL);
+        try (Connection conn = DriverManager.getConnection(this.DB_URL);
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             // 仅设置月份参数

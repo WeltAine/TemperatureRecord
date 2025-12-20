@@ -6,7 +6,7 @@ import service.TemperatureDBService;
 import model.QueryContext;
 import model.QueryResult;
 import model.User;
-
+import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -39,8 +39,16 @@ public class TemperatureController extends HttpServlet {
 
 
 
-    private TemperatureService tempService = new TemperatureService();//json服务
+    // private TemperatureService tempService = new TemperatureService();//json服务
     private TemperatureDBService dbService = new TemperatureDBService();
+
+    @Override
+    public void init() throws ServletException {
+        super.init();
+        // 初始化数据库路径
+        ServletContext servletContext = this.getServletContext();
+        dbService.initDBPath(servletContext);
+    }
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
@@ -63,7 +71,7 @@ public class TemperatureController extends HttpServlet {
 
 
         // 拼接标准月份格式（yyyy-mm）
-        String yearMonth = String.format("%d-%02d", currentYear, currentMonth);
+        String yearMonth = String.format("%d-%d", currentYear, currentMonth);
 
 
         // ------------------- 2. 解析筛选参数（统一用startDay/endDay） -------------------
@@ -103,11 +111,11 @@ public class TemperatureController extends HttpServlet {
         List<User> userList;
         if (name != null && !name.isEmpty()) {
             // 链2：姓名 → 日期段（仅姓名+月份查数据库，然后筛日期段）
-            QueryResult result = QueryChainBuilder.buildChain2(context);
+            QueryResult result = QueryChainBuilder.buildChain2(context, this.getServletContext());
             userList = result.getUserList();
         } else {
             // 链1：性别 → 年龄 → 地区 → 日期段（仅性别+月份查数据库，然后筛年龄/地区/日期）
-            QueryResult result = QueryChainBuilder.buildChain1(context);
+            QueryResult result = QueryChainBuilder.buildChain1(context, this.getServletContext());
             userList = result.getUserList();
         }
 

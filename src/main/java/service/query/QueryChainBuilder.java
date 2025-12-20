@@ -6,15 +6,17 @@ import service.query.decorator.AgeFilterDecorator;
 import service.query.decorator.AreaFilterDecorator;
 import service.query.decorator.DateRangeFilterDecorator;
 import model.QueryResult;
+import jakarta.servlet.ServletContext;
 import model.QueryContext;
 
 // 查询链构建工具：封装两条链的组合逻辑，直接返回最终结果
 public class QueryChainBuilder {
 
     // 链1：月份（数据库）→ 性别 → 年龄 → 地区 → 日期段（无姓名筛选）
-    public static QueryResult buildChain1(QueryContext context) {
+    public static QueryResult buildChain1(QueryContext context, ServletContext servletContext) {
         // 步骤1：数据库层查询当前月份所有数据
-        TemperatureQuery baseQuery = new BaseTemperatureQuery(context);
+        BaseTemperatureQuery baseQuery = new BaseTemperatureQuery(context);
+        baseQuery.initDBPath(servletContext);
         // 步骤2：内存层叠加性别筛选
         TemperatureQuery genderFilter = new GenderFilterDecorator(baseQuery);
         // 步骤3：内存层叠加年龄筛选
@@ -28,9 +30,10 @@ public class QueryChainBuilder {
     }
 
     // 链2：月份（数据库）→ 姓名 → 日期段（无性别/年龄/地区筛选）
-    public static QueryResult buildChain2(QueryContext context) {
+    public static QueryResult buildChain2(QueryContext context, ServletContext servletContext) {
         // 步骤1：数据库层查询当前月份所有数据
-        TemperatureQuery baseQuery = new BaseTemperatureQuery(context);
+        BaseTemperatureQuery baseQuery = new BaseTemperatureQuery(context);
+        baseQuery.initDBPath(servletContext);
         // 步骤2：内存层叠加姓名筛选
         TemperatureQuery nameFilter = new NameFilterDecorator(baseQuery);
         // 步骤3：内存层叠加日期段筛选

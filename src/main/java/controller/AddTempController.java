@@ -2,7 +2,7 @@ package controller;
 
 import model.User;
 import service.TemperatureDBService;
-
+import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -14,6 +14,14 @@ import java.util.Arrays;
 @WebServlet("/addTempController")
 public class AddTempController extends HttpServlet {
     private TemperatureDBService tempService = new TemperatureDBService();
+
+    @Override
+    public void init() throws ServletException {
+        super.init();
+        // 初始化数据库路径
+        ServletContext servletContext = this.getServletContext();
+        tempService.initDBPath(servletContext);
+    }
 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
@@ -31,7 +39,7 @@ public class AddTempController extends HttpServlet {
         int day = Integer.parseInt(request.getParameter("day"));
         double temperature = Double.parseDouble(request.getParameter("temperature"));
         
-        String yearMonth = year + "-" + String.format("%02d", month);
+        String yearMonth = year + "-" + String.format("%d", month);
         int dayIndex = day - 1;
 
         // 3. 查询用户是否存在（目的：保留原有体温，仅改目标日期）

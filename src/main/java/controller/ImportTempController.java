@@ -11,6 +11,7 @@ import java.nio.file.StandardCopyOption;
 import java.io.File;
 
 import service.TemperatureDBService;
+import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.MultipartConfig;
 import jakarta.servlet.annotation.WebServlet;
@@ -49,9 +50,11 @@ public class ImportTempController extends HttpServlet {
     @Override
     public void init() throws ServletException {
         super.init();
-        writeLog("===== ImportTempController 初始化完成！控制器已被Tomcat加载 =====");
+        // 初始化数据库路径
+        ServletContext servletContext = this.getServletContext();
+        tempService.initDBPath(servletContext);
     }
-
+    
     // ========== 3. 核心POST方法（全流程日志） ==========
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {

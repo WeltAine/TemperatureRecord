@@ -1,7 +1,7 @@
 package controller;
 
 import service.TemperatureDBService;
-
+import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
@@ -19,6 +19,14 @@ import java.text.SimpleDateFormat;
 @WebServlet("/exportAllTempController")
 public class ExportAllTempController extends HttpServlet {
     private TemperatureDBService tempService = new TemperatureDBService();
+
+    @Override
+    public void init() throws ServletException {
+        super.init();
+        // 初始化数据库路径
+        ServletContext servletContext = this.getServletContext();
+        tempService.initDBPath(servletContext);
+    }
 
     @Override
     protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
@@ -43,4 +51,5 @@ public class ExportAllTempController extends HttpServlet {
             os.flush();
         }
     }
+
 }

@@ -18,10 +18,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import jakarta.servlet.ServletContext; 
+
 public class TemperatureDBService {
 
     private static final String LOG_FILE_PATH = "O:\\JavaProgram\\Log\\temp_log.txt";
-    private static final String DB_URL = "jdbc:sqlite:O:\\JavaProgram\\TemperatureRecord\\db\\user_temperature.db";
+    // private static final String DB_URL = "jdbc:sqlite:O:\\JavaProgram\\TemperatureRecord\\db\\user_temperature.db";
+    private String DB_URL;
 
     // 日志写入工具方法
     private void writeLog(String content) {
@@ -30,6 +33,17 @@ public class TemperatureDBService {
         } catch (IOException e) {
             System.out.println("日志写入失败：" + e.getMessage());
         }
+    }
+
+    // 初始化数据库路径（由控制器调用，传递ServletContext）
+    public void initDBPath(ServletContext servletContext) {
+        // 获取WEB-INF的真实部署路径（适配任意电脑的Tomcat）
+        String webInfPath = servletContext.getRealPath("/WEB-INF");
+        // 拼接数据库文件路径：WEB-INF/user_temperature.db
+        File dbFile = new File(webInfPath, "user_temperature.db");
+        // 生成SQLite的JDBC URL
+        this.DB_URL = "jdbc:sqlite:" + dbFile.getAbsolutePath();
+        // 日志记录路径（方便排查）
     }
 
     // 驱动加载工具方法（复用）
@@ -51,9 +65,9 @@ public class TemperatureDBService {
 
         String workDir = System.getProperty("user.dir");
 
-        String yearMonth = year + "-" + String.format("%02d", Integer.parseInt(month));
+        String yearMonth = year + "-" + String.format("%d", Integer.parseInt(month));
 
-        try (Connection conn = DriverManager.getConnection(DB_URL);
+        try (Connection conn = DriverManager.getConnection(this.DB_URL);
              PreparedStatement pstmt = conn.prepareStatement(
                  "SELECT name, gender, age, address, temperature FROM user_temperature WHERE year_month = ?"
              )) {
@@ -108,7 +122,7 @@ public class TemperatureDBService {
             }
         }
 
-        try (Connection conn = DriverManager.getConnection(DB_URL);
+        try (Connection conn = DriverManager.getConnection(this.DB_URL);
              PreparedStatement pstmt = conn.prepareStatement(
                  "INSERT INTO user_temperature (name, gender, age, address, temperature, year_month) " +
                  "VALUES (?, ?, ?, ?, ?, ?)"
@@ -149,7 +163,7 @@ public class TemperatureDBService {
             }
         }
 
-        try (Connection conn = DriverManager.getConnection(DB_URL);
+        try (Connection conn = DriverManager.getConnection(this.DB_URL);
              PreparedStatement pstmt = conn.prepareStatement(
                  "UPDATE user_temperature SET gender=?, age=?, address=?, temperature=? " +
                  "WHERE name=? AND year_month=?"
@@ -180,7 +194,7 @@ public class TemperatureDBService {
             return null;
         }
 
-        try (Connection conn = DriverManager.getConnection(DB_URL);
+        try (Connection conn = DriverManager.getConnection(this.DB_URL);
             PreparedStatement pstmt = conn.prepareStatement(
                 "SELECT name, gender, age, address, temperature FROM user_temperature WHERE year_month = ? AND name = ?"
             )) {
@@ -229,7 +243,7 @@ public class TemperatureDBService {
         }
 
         String sql = "SELECT name, gender, age, address, temperature, year_month FROM user_temperature";
-        try (Connection conn = DriverManager.getConnection(DB_URL);
+        try (Connection conn = DriverManager.getConnection(this.DB_URL);
              PreparedStatement pstmt = conn.prepareStatement(sql);
              ResultSet rs = pstmt.executeQuery()) {
 
@@ -313,7 +327,7 @@ public class TemperatureDBService {
             return false;
         }
 
-        try (Connection conn = DriverManager.getConnection(DB_URL)) {
+        try (Connection conn = DriverManager.getConnection(this.DB_URL)) {
             conn.setAutoCommit(false); // 事务批量处理
             String insertSql = "INSERT OR REPLACE INTO user_temperature " +
                     "(name, gender, age, address, temperature, year_month) " +
@@ -370,7 +384,7 @@ public class TemperatureDBService {
         }
 
         // 2. 生成目标年月格式（和原有代码保持一致：yyyy-MM）
-        String targetYearMonth = year + "-" + String.format("%02d", month);
+        String targetYearMonth = year + "-" + String.format("%d", month);
 
         Gson gson = new Gson();
         MultiTempExportVO importVO = null;
@@ -393,7 +407,7 @@ public class TemperatureDBService {
         }
 
         // 6. 批量导入指定年月的数据（仅筛选目标年月，其余复用）
-        try (Connection conn = DriverManager.getConnection(DB_URL)) {
+        try (Connection conn = DriverManager.getConnection(this.DB_URL)) {
             conn.setAutoCommit(false);
             String insertSql = "INSERT OR REPLACE INTO user_temperature " +
                     "(name, gender, age, address, temperature, year_month) " +
